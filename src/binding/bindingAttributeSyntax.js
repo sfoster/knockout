@@ -24,6 +24,7 @@
     };
     ko.bindingContext.prototype['extend'] = function(properties) {
         var clone = ko.utils.extend(new ko.bindingContext(), this);
+        clone['$context'] = clone;
         return ko.utils.extend(clone, properties);
     };
 
