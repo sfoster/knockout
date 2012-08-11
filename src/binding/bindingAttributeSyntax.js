@@ -17,6 +17,7 @@
             this['ko'] = ko;
         }
         this['$data'] = dataItem;
+        this['$context'] = this;
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
