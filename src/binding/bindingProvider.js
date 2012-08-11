@@ -16,7 +16,7 @@
 
         'getBindings': function(node, bindingContext) {
             var bindingsString = this['getBindingsString'](node, bindingContext);
-            return bindingsString ? this['parseBindingsString'](bindingsString, bindingContext, node) : null;
+            return bindingsString ? this['parseBindingsString'](bindingsString, node, bindingContext) : null;
         },
 
         // The following function is only used internally by this default provider.
@@ -31,10 +31,10 @@
 
         // The following function is only used internally by this default provider.
         // It's not part of the interface definition for a general binding provider.
-        'parseBindingsString': function(bindingsString, bindingContext, node) {
+        'parseBindingsString': function(bindingsString, node, bindingContext) {
             try {
                 var bindingFunction = createBindingsStringEvaluatorViaCache(bindingsString, this.bindingCache);
-                return bindingFunction(bindingContext, node);
+                return bindingFunction(node, bindingContext);
             } catch (ex) {
                 throw new Error("Unable to parse bindings.\nMessage: " + ex + ";\nBindings value: " + bindingsString);
             }
@@ -55,7 +55,7 @@
         // Example result: with(sc1) { with(sc0) { return (expression) } }
         var rewrittenBindings = ko.expressionRewriting.preProcessBindings(bindingsString),
             functionBody = "with($context){with($data||{}){return{" + rewrittenBindings + "} } }";
-        return new Function("$context", "$element", functionBody);
+        return new Function("$element", "$context", functionBody);
     }
 })();
 

@@ -17,14 +17,12 @@
             this['ko'] = ko;
         }
         this['$data'] = dataItem;
-        this['$context'] = this;
     }
     ko.bindingContext.prototype['createChildContext'] = function (dataItem) {
         return new ko.bindingContext(dataItem, this);
     };
     ko.bindingContext.prototype['extend'] = function(properties) {
         var clone = ko.utils.extend(new ko.bindingContext(), this);
-        clone['$context'] = clone;
         return ko.utils.extend(clone, properties);
     };
 
@@ -104,7 +102,7 @@
                     ko.storedBindingContextForNode(node, bindingContextInstance);
 
                 // Use evaluatedBindings if given, otherwise fall back on asking the bindings provider to give us some bindings
-                var evaluatedBindings = (typeof bindings == "function") ? bindings(node) : bindings;
+                var evaluatedBindings = (typeof bindings == "function") ? bindings(node, bindingContextInstance) : bindings;
                 parsedBindings = evaluatedBindings || ko.bindingProvider['instance']['getBindings'](node, bindingContextInstance);
 
                 if (parsedBindings) {
