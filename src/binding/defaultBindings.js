@@ -103,6 +103,7 @@ ko.bindingHandlers['disable'] = {
     }
 };
 
+var triggerEventIgnoreDependencies = ko.dependencyDetection.makeIgnoredCallback(ko.utils.triggerEvent);
 function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, preferModelValue) {
     if (preferModelValue) {
         if (modelValue !== ko.selectExtensions.readValue(element))
@@ -113,7 +114,7 @@ function ensureDropdownSelectionIsConsistentWithModelValue(element, modelValue, 
     // If they aren't equal, either we prefer the dropdown value, or the model value couldn't be represented, so either way,
     // change the model value to match the dropdown.
     if (modelValue !== ko.selectExtensions.readValue(element))
-        ko.utils.triggerEvent(element, "change");
+        triggerEventIgnoreDependencies(element, "change");
 };
 
 ko.bindingHandlers['value'] = {
@@ -273,7 +274,7 @@ ko.bindingHandlers['options'] = {
                 // Ensure consistency between model value and selected option.
                 // If the dropdown is being populated for the first time here (or was otherwise previously empty),
                 // the dropdown selection state is meaningless, so we preserve the model value.
-                ensureDropdownSelectionIsConsistentWithModelValue(element, ko.utils.unwrapObservable(allBindings['value']), /* preferModelValue */ true);
+                ensureDropdownSelectionIsConsistentWithModelValue(element, ko.utils.peekObservable(allBindings['value']), /* preferModelValue */ true);
             }
 
             // Workaround for IE9 bug
@@ -378,11 +379,11 @@ ko.bindingHandlers['checked'] = {
                 return; // "checked" binding only responds to checkboxes and selected radio buttons
             }
 
-            var modelValue = valueAccessor();
-            if ((element.type == "checkbox") && (ko.utils.unwrapObservable(modelValue) instanceof Array)) {
+            var modelValue = valueAccessor(), unwrappedValue = ko.utils.unwrapObservable(modelValue);
+            if ((element.type == "checkbox") && (unwrappedValue instanceof Array)) {
                 // For checkboxes bound to an array, we add/remove the checkbox value to that array
                 // This works for both observable and non-observable arrays
-                var existingEntryIndex = ko.utils.arrayIndexOf(ko.utils.unwrapObservable(modelValue), element.value);
+                var existingEntryIndex = ko.utils.arrayIndexOf(unwrappedValue, element.value);
                 if (element.checked && (existingEntryIndex < 0))
                     modelValue.push(element.value);
                 else if ((!element.checked) && (existingEntryIndex >= 0))
@@ -486,7 +487,7 @@ ko.bindingHandlers['hasfocus'] = {
         if (!element[hasfocusUpdatingProperty]) {
             var value = ko.utils.unwrapObservable(valueAccessor());
             value ? element.focus() : element.blur();
-            ko.utils.triggerEvent(element, value ? "focusin" : "focusout"); // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
+            triggerEventIgnoreDependencies(element, value ? "focusin" : "focusout"); // For IE, which doesn't reliably fire "focus" or "blur" events synchronously
         }
     }
 };
@@ -541,19 +542,23 @@ ko.virtualElements.allowedBindings['ifnot'] = true;
 ko.bindingHandlers['foreach'] = {
     makeTemplateValueAccessor: function(valueAccessor) {
         return function() {
-            var bindingValue = ko.utils.unwrapObservable(valueAccessor());
+            var modelValue = valueAccessor(),
+                unwrappedValue = ko.utils.peekObservable(modelValue);    // Unwrap without setting a dependency here
 
-            // If bindingValue is the array, just pass it on its own
-            if ((!bindingValue) || typeof bindingValue.length == "number")
-                return { 'foreach': bindingValue, 'templateEngine': ko.nativeTemplateEngine.instance };
+            // If unwrappedValue is the array, pass in the wrapped value on its own
+            // The value will be unwrapped and tracked within the template binding
+            // (See https://github.com/SteveSanderson/knockout/issues/523)
+            if ((!unwrappedValue) || typeof unwrappedValue.length == "number")
+                return { 'foreach': modelValue, 'templateEngine': ko.nativeTemplateEngine.instance };
 
-            // If bindingValue.data is the array, preserve all relevant options
+            // If unwrappedValue.data is the array, preserve all relevant options and unwrap again value so we get updates
+            ko.utils.unwrapObservable(modelValue);
             return {
-                'foreach': bindingValue['data'],
-                'includeDestroyed': bindingValue['includeDestroyed'],
-                'afterAdd': bindingValue['afterAdd'],
-                'beforeRemove': bindingValue['beforeRemove'],
-                'afterRender': bindingValue['afterRender'],
+                'foreach': unwrappedValue['data'],
+                'includeDestroyed': unwrappedValue['includeDestroyed'],
+                'afterAdd': unwrappedValue['afterAdd'],
+                'beforeRemove': unwrappedValue['beforeRemove'],
+                'afterRender': unwrappedValue['afterRender'],
                 'templateEngine': ko.nativeTemplateEngine.instance
             };
         };

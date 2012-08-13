@@ -56,7 +56,7 @@
                 fixUpNodesToBeRemoved(mappedNodes);
                 ko.utils.replaceDomNodes(mappedNodes, newMappedNodes);
                 if (callbackAfterAddingNodes)
-                    callbackAfterAddingNodes(valueToMap, newMappedNodes);
+                    callbackAfterAddingNodes(valueToMap, newMappedNodes, index);
             }
 
             // Replace the contents of the mappedNodes array, thereby updating the record
@@ -73,6 +73,8 @@
         // Compare the provided array against the previous one
         array = array || [];
         options = options || {};
+        if (callbackAfterAddingNodes)
+            callbackAfterAddingNodes = ko.dependencyDetection.makeIgnoredCallback(callbackAfterAddingNodes);
         var isFirstExecution = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) === undefined;
         var lastMappingResult = ko.utils.domData.get(domNode, lastMappingResultDomDataKey) || [];
         var lastArray = ko.utils.arrayMap(lastMappingResult, function (x) { return x.arrayEntry; });
