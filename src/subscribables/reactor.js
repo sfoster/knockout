@@ -8,14 +8,23 @@ ko.reactor = function(callback, owner, options) {
         disposeWhenNodeIsRemoved: options && options['disposeWhenNodeIsRemoved']
     });
 
-    return {
+    var result = {
         dispose: function() {
             // computed will be null if its evaluator had no dependencies. In that case, this is a no-op.
             if (computed) {
                 computed.dispose();
             }
+        },
+        extend: function() {
+            if (computed) {
+                computed = computed.extend.apply(computed, arguments);
+            }
         }
     };
+
+    ko.exportProperty(result, 'dispose', result.dispose);
+    ko.exportProperty(result, 'extend', result.extend);
+    return result;
 };
 
 ko.exportSymbol('reactor', ko.reactor);

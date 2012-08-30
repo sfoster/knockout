@@ -107,3 +107,40 @@ asyncTest("Should run evaluator only once when dependencies stop updating for th
 		}, 110);
 	}, 10);
 });
+
+// ---------
+
+module("Throttled reactors");
+
+asyncTest("Should run evaluator only once when dependencies stop updating for the specified timeout duration", function() {
+	var evaluationCount = 0;
+	var someDependency = ko.observable();
+	var asyncDepObs = ko.reactor(function() {
+		evaluationCount++;
+		return someDependency();
+	}).extend({ throttle: 100 });
+
+	// Mutate a few times synchronously
+	start();
+	equal(evaluationCount, 1); // Evaluates synchronously when first created, like all dependent observables
+	someDependency("A");
+	someDependency("B");
+	someDependency("C");
+	equal(evaluationCount, 1, "Should not re-evaluate synchronously when dependencies update");
+
+	// Also mutate async
+	stop();
+	setTimeout(function() {
+		start();
+		someDependency("D");
+		equal(evaluationCount, 1);
+
+		// Now wait for throttle timeout
+		stop();
+		setTimeout(function() {
+			start();
+			equal(evaluationCount, 2); // Finally, it's evaluated
+			equal(asyncDepObs(), "D");
+		}, 110);
+	}, 10);
+});
