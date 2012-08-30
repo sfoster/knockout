@@ -49,22 +49,26 @@
     function mapNodeAndRefreshWhenChanged(containerNode, mapping, valueToMap, callbackAfterAddingNodes, index) {
         // Map this array value inside a computed observable so we re-map when any dependency changes
         var mappedNodes = [];
-        var computedObservable = ko.computed.possiblyWrap(function() {
-            var newMappedNodes = mapping(valueToMap, index) || [];
+        var reactorOptions = {
+                disposeWhen: function() { return (mappedNodes.length == 0) || !ko.utils.domNodeIsAttachedToDocument(mappedNodes[0]) },
+                disposeWhenNodeIsRemoved: containerNode
+            },
+            reactor = ko.reactor(function() {
+                var newMappedNodes = mapping(valueToMap, index) || [];
 
-            // On subsequent evaluations, just replace the previously-inserted DOM nodes
-            if (mappedNodes.length > 0) {
-                ko.utils.replaceDomNodes(fixUpNodesToBeMovedOrRemoved(mappedNodes), newMappedNodes);
-                if (callbackAfterAddingNodes)
-                    callbackAfterAddingNodes(valueToMap, newMappedNodes, index);
-            }
+                // On subsequent evaluations, just replace the previously-inserted DOM nodes
+                if (mappedNodes.length > 0) {
+                    ko.utils.replaceDomNodes(fixUpNodesToBeMovedOrRemoved(mappedNodes), newMappedNodes);
+                    if (callbackAfterAddingNodes)
+                        callbackAfterAddingNodes(valueToMap, newMappedNodes, index);
+                }
 
-            // Replace the contents of the mappedNodes array, thereby updating the record
-            // of which nodes would be deleted if valueToMap was itself later removed
-            mappedNodes.splice(0, mappedNodes.length);
-            ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
-        }, containerNode, function() { return (mappedNodes.length == 0) || !ko.utils.domNodeIsAttachedToDocument(mappedNodes[0]) } );
-        return { mappedNodes : mappedNodes, computedObservable : computedObservable };
+                // Replace the contents of the mappedNodes array, thereby updating the record
+                // of which nodes would be deleted if valueToMap was itself later removed
+                mappedNodes.splice(0, mappedNodes.length);
+                ko.utils.arrayPushAll(mappedNodes, newMappedNodes);
+            }, null, reactorOptions);
+        return { mappedNodes : mappedNodes, reactor : reactor };
     }
 
     var lastMappingResultDomDataKey = "setDomNodeChildrenFromArrayMapping_lastMappingResult";
@@ -121,8 +125,7 @@
                         mapData = lastMappingResult[lastMappingResultIndex];
 
                         // Stop tracking changes to the mapping for these nodes
-                        if (mapData.computedObservable)
-                            mapData.computedObservable.dispose();
+                        mapData.reactor.dispose();
 
                         // Queue these nodes for later removal
                         nodesToDelete.push.apply(nodesToDelete, fixUpNodesToBeMovedOrRemoved(mapData.mappedNodes));

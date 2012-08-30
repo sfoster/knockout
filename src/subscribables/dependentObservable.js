@@ -52,13 +52,15 @@ ko.computed = function (evaluatorFunctionOrOptions, evaluatorFunctionTarget, opt
     if (!evaluatorFunctionTarget)
         evaluatorFunctionTarget = options["owner"];
 
-    // Evaluate, unless deferEvaluation is true, unless returnValueIfNoDependencies is true
-    if (disposeWhenNodeIsRemoved || options.returnValueIfNoDependencies || options['deferEvaluation'] !== true)
+    // Evaluate, unless deferEvaluation is true and we're not aborting if there are no dependencies
+    if (options.returnNullIfNoDependencies || options['deferEvaluation'] !== true)
         evaluateInitial();
 
-    // just return the value if returnValueIfNoDependencies is true and there are no dependencies
-    if (options.returnValueIfNoDependencies && !_subscriptionsToDependencies.length)
-        return _latestValue;
+    // Bail out if there are no dependencies and we've been told to returnNullIfNoDependencies
+    // This is an optimization to allow ko.reactor to skip the business of registering "dispose when" callbacks if the
+    // evaluator is never going to run again anyway
+    if (options.returnNullIfNoDependencies && !_subscriptionsToDependencies.length)
+        return null;
 
     // Build "disposeWhenNodeIsRemoved" and "disposeWhenNodeIsRemovedCallback" option values
     // (Note: "disposeWhenNodeIsRemoved" option both proactively disposes as soon as the node is removed using ko.removeNode(),
@@ -174,14 +176,6 @@ ko.computed = function (evaluatorFunctionOrOptions, evaluatorFunctionTarget, opt
     return dependentObservable;
 };
 
-ko.computed.possiblyWrap = function(readFunction, disposeWhenNodeIsRemoved, disposeWhen) {
-    return ko.computed(readFunction, null, {
-        disposeWhenNodeIsRemoved: disposeWhenNodeIsRemoved,
-        disposeWhen: disposeWhen,
-        returnValueIfNoDependencies: true
-    });
-}
-
 ko.isComputed = function(instance) {
     return ko.hasPrototype(instance, ko.computed);
 };
@@ -192,7 +186,6 @@ ko.computed[protoProp] = ko.observable;
 ko.computed['fn'] = {};
 ko.computed['fn'][protoProp] = ko.computed;
 
-ko.exportProperty(ko.computed, 'possiblyWrap', ko.computed.possiblyWrap);
 ko.exportSymbol('dependentObservable', ko.computed); // Make "ko.dependentObservable" an alias for "ko.computed"
 ko.exportSymbol('computed', ko.computed);
 ko.exportSymbol('isComputed', ko.isComputed);

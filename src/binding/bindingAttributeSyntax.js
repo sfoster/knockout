@@ -89,7 +89,7 @@
         }
 
         var bindingHandlerThatControlsDescendantBindings;
-        ko.computed.possiblyWrap(
+        ko.reactor(
             function () {
                 // Ensure we have a nonnull binding context to work with
                 var bindingContextInstance = viewModelOrBindingContext && (viewModelOrBindingContext instanceof ko.bindingContext)
@@ -143,7 +143,8 @@
                     }
                 }
             },
-            node
+            null,
+            { disposeWhenNodeIsRemoved: node }
         );
 
         return {
