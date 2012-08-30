@@ -36,6 +36,7 @@ rm $OutDebugFile.temp
 # Create an un-minified, AMD-only output file
 cp fragments/version-header.js $OutJustAMDFile
 echo "define(function(){"           >> $OutJustAMDFile
+echo "var DEBUG=true;"              >> $OutJustAMDFile
 cat $SourceFiles                    >> $OutJustAMDFile
 echo "// AMD boilerplate"           >> $OutJustAMDFile
 echo "return ko;"                   >> $OutJustAMDFile
