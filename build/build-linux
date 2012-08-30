@@ -9,6 +9,7 @@ tools/check-trailing-space-linux || handle_fail
 
 OutDebugFile='output/knockout-latest.debug.js'
 OutMinFile='output/knockout-latest.js'
+OutJustAMDFile='output/knockout-latest.amd.js'
 
 # Combine the source files
 SourceFiles=`grep js < fragments/source-references.js | # Find JS references
@@ -32,13 +33,22 @@ cat $OutDebugFile.temp              >> $OutDebugFile
 echo "})();"                        >> $OutDebugFile
 rm $OutDebugFile.temp
 
+# Create an un-minified, AMD-only output file
+cp fragments/version-header.js $OutJustAMDFile
+echo "define(function(){"           >> $OutJustAMDFile
+cat $SourceFiles                    >> $OutJustAMDFile
+echo "// AMD boilerplate"           >> $OutJustAMDFile
+echo "return ko;"                   >> $OutJustAMDFile
+echo "});"                          >> $OutJustAMDFile
+
+
 cp fragments/version-header.js $OutMinFile
 cat $OutMinFile.temp                >> $OutMinFile
 rm $OutMinFile.temp
 
 # Inject the version number string
 Version=`cat fragments/version.txt`
-sed -i~ -e "s/##VERSION##/$Version/g" $OutDebugFile $OutMinFile
+sed -i~ -e "s/##VERSION##/$Version/g" $OutDebugFile $OutMinFile $OutJustAMDFile
 
 # Delete the odd files left behind on Mac
 rm -f output/*.js~
