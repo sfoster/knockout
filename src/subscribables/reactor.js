@@ -4,8 +4,8 @@
 ko.reactor = function(callback, owner, options) {
     var computed = ko.computed(callback, owner, {
         returnNullIfNoDependencies: true,
-        disposeWhen: options && options['disposeWhen'],
-        disposeWhenNodeIsRemoved: options && options['disposeWhenNodeIsRemoved']
+        disposeWhen: options && (options['disposeWhen'] || options.disposeWhen),
+        disposeWhenNodeIsRemoved: options && (options['disposeWhenNodeIsRemoved'] || options.disposeWhenNodeIsRemoved)
     });
 
     var result = {
